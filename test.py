@@ -78,6 +78,14 @@ class Sphere:
 
     def __call__(self, coor: np.ndarray) -> typing.Union[bool, typing.Tuple, np.ndarray, None]:
         return self.color if np.sum((coor - self.center) ** 2) <= self.rad ** 2 else np.zeros(4,dtype=float)
+class Cube:
+    def __init__(self, center: np.ndarray, length: Numeric, rgba: np.ndarray):
+        self.center = center
+        self.length = length
+        self.color = rgba
+
+    def __call__(self, coor: np.ndarray) -> typing.Union[bool, typing.Tuple, np.ndarray, None]:
+        return self.color if (abs(coor-self.center)<=self.length/2).all() else np.zeros(4,dtype=float)
 
 
 elevation = math.pi * (1 / 6)
@@ -96,7 +104,7 @@ camDirec = rotateMat @ Vector(0, 0, -1)
 print(camDirec)
 
 objs=[Sphere(camPos+camDirec*20, 10, np.array((255,255,255,1),dtype=float)),
-     Sphere(camPos+camDirec*15+Vector(30,0,0), 15, np.array((255,255,255,1),dtype=float))]
+     Cube(camPos+camDirec*15+Vector(40,-10,0),30, np.array((255,255,255,1),dtype=float))]
 print(camPos+camDirec*15+Vector(30,0,0))
 print([obj(camPos) for obj in objs])
 
@@ -126,10 +134,11 @@ for x,y,z in np.ndindex(100,100,100):
     viewVec=inv_rotateMat@(vec-camPos)
     # print(viewVec)
 
-    if viewVec.z==0: continue
+    if viewVec.z==0 or viewVec.z>0: continue
     projectVec=Vector(viewVec.x-spec2Screen.x,viewVec.y-spec2Screen.y,viewVec.z)*(abs(spec2Screen.z)/abs(viewVec.z))
+    #at this time projectVec.z==spec2Screen.z
     print(projectVec)
-    
+
     screenx=math.floor(projectVec.x-(-screen_width/2))
     screeny=math.floor(-(projectVec.y-(screen_width/2)))
     if screenx>=screen_width or screenx<0 or screeny>=screen_width or screeny<0: #restrict projection vectors

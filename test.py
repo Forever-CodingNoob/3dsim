@@ -36,6 +36,11 @@ def rotate(theta, axis: str) -> np.ndarray:
 def crange(start, end, step=1.0):
     return np.arange(start, end + step / 2, step)
 
+def betterColor(a:np.ndarray,b:np.ndarray):
+    if not b.any():
+        return a
+    return b
+
 class Vector(np.ndarray):
     @staticmethod
     def arrToVector(arr: typing.Union[typing.List, typing.Tuple, np.ndarray]):
@@ -80,9 +85,9 @@ rotationY = 0
 rotationZ = -math.pi * (1 / 6)
 
 camPos = Vector(10, 20, 30)
-spec2Screen = Vector(0,0,-1)
-screen_width=2
-screen=np.zeros((screen_width*100,screen_width*100,4),dtype=float)
+spec2Screen = Vector(0,0,-10)
+screen_width=100
+screen=np.zeros((screen_width,screen_width,4),dtype=float)
 
 rotateMat = rotate(rotationZ, 'Z') @ rotate(elevation, 'X') @ rotate(rotationY, 'Y') @ rotate(math.radians(90), 'X')
 inv_rotateMat = inv(rotateMat)
@@ -90,9 +95,12 @@ inv_rotateMat = inv(rotateMat)
 camDirec = rotateMat @ Vector(0, 0, -1)
 print(camDirec)
 
-b = Sphere(Vector(30, 50, 10), 50, np.array((255,255,255,1),dtype=float))
-print(b(camPos))
+objs=[Sphere(camPos+camDirec*20, 10, np.array((255,255,255,1),dtype=float)),
+     Sphere(camPos+camDirec*15+Vector(30,0,0), 15, np.array((255,255,255,1),dtype=float))]
+print(camPos+camDirec*15+Vector(30,0,0))
+print([obj(camPos) for obj in objs])
 
+'''trash'''
 # coor=crange(0,100,1)
 # space=np.zeros((100,100,100,4),dtype=float) #x,y,z,color(rgba)
 # with np.nditer(space, flags=['multi_index','refs_ok'], op_flags=['writeonly']) as it:
@@ -105,27 +113,39 @@ print(b(camPos))
 #     print(rotateMat@arrToVector(i))
 #     space[i]=b(rotateMat@arrToVector(i))
 # print(np.sum(space))
+''''''
+
 for x,y,z in np.ndindex(100,100,100):
-    print(x,y,z)
+    # print(x,y,z)
     vec=Vector(x,y,z)
-    color=b(Vector(x,y,z))
+    color=np.zeros(4,dtype=float)
+    for obj in objs:
+        color=betterColor(color,obj(Vector(x,y,z)))
+    if not color.any(): continue
 
     viewVec=inv_rotateMat@(vec-camPos)
     # print(viewVec)
 
     if viewVec.z==0: continue
     projectVec=Vector(viewVec.x-spec2Screen.x,viewVec.y-spec2Screen.y,viewVec.z)*(abs(spec2Screen.z)/abs(viewVec.z))
-    # print(projectVec)
-
-    if abs(projectVec.x)>screen_width/2 or abs(projectVec.y)>screen_width/2: #restrict projection vectors
+    print(projectVec)
+    
+    screenx=math.floor(projectVec.x-(-screen_width/2))
+    screeny=math.floor(-(projectVec.y-(screen_width/2)))
+    if screenx>=screen_width or screenx<0 or screeny>=screen_width or screeny<0: #restrict projection vectors
         continue
-    screenx=math.floor((projectVec.x-(-screen_width/2))*100)
-    screeny=math.floor((projectVec.y-(-screen_width/2))*100)
     if not screen[screeny,screenx].any(): #all zero
         screen[screeny,screenx]=color
-    # print(math.floor((projectVec.y-(-screen_width))*100),math.floor((projectVec.x-(-screen_width))*100))
+    print(screenx,screeny)
 #ppp
 print(screen)
+
+with open('result.txt',mode='w+') as f:
+    f.write('\n'.join([''.join(['@@' if color.any() else '..' for color in row]) for row in screen]))
+    # for i in screen:
+    #     for color in i:
+    #         f.write('@@' if color.any() else '..')
+    # f.write('\n')
 
 
 
